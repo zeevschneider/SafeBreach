@@ -1,0 +1,48 @@
+# Python
+*.pyc
+
+# Distribution / packaging
+/dist/
+/*.egg-info
+__pycache__/
+
+# Sphinx documentation
+docs/_build/
+
+# Scons
+/.sconsign.dblite
+
+# Pyenv
+.python-version
+
+# Artifacts (reports, static code results, etc)
+/artifacts/**
+
+# Environment
+local_configuration.yml
+
+# IDE
+/.idea/**
+
+# Cache
+**/.pytest_cache/**
+
+# logs
+*/logs/**
+*.log
+
+# Git
+*~HEAD*
+
+# Reports
+*.html
+
+# CSS
+*.css
+
+# Virtual Environment
+/CreditEnv/**
+
+# Expected/Actual files
+*actual_file**
+*expected_file**
