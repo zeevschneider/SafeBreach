@@ -46,3 +46,6 @@ local_configuration.yml
 # Expected/Actual files
 *actual_file**
 *expected_file**
+
+*.idea
+*.iml
