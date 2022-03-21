@@ -1,6 +1,7 @@
 from imapclient import IMAPClient
 import email
 import os.path
+import sys
 import re
 import subprocess
 import smtplib, ssl
@@ -82,7 +83,6 @@ def handle_message():
             break
 
 
-
 def parse_message(message, key_word="banana".lower()):
     """
         Parses message for data
@@ -155,16 +155,14 @@ def send_response(address, message=None, file=None, result=None):
     :param result: Result of file run
     :return:
     """
+    # TODO - refactor the method
 
     sender_data = get_config_data()
     if message == 'success':
-        print('at success')
         return_message = f"File {file} that you sent has successfully run. To see the result please open attached file."
     elif message == 'error':
-        print('at error')
         return_message = f"File {file} that you sent has run with an error. To see the result please open attached file."
     else:
-        print("writing message")
         return_message = f'Your message had {message} '
 
     smtp_server = 'smtp.gmail.com'
@@ -197,7 +195,7 @@ def send_response(address, message=None, file=None, result=None):
                 p.add_header('Content-Disposition', "attachment; filename= %s" % file_path.split("\\")[-1])
                 message.attach(p)
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
     msg_full = message.as_string()
     context = ssl.create_default_context()
@@ -211,7 +209,6 @@ def send_response(address, message=None, file=None, result=None):
 
     print("email sent out successfully")
 
-handle_message()
 
-
-
+if __name__ == '__main__':
+    sys.exit(handle_message())
