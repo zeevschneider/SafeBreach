@@ -4,12 +4,15 @@ import os.path
 import re
 import subprocess
 import smtplib, ssl
+import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from config_parser import get_config_data
 from datetime import datetime
 from collections import namedtuple
+
+logging.basicConfig(filename="logfile.log", level=logging.INFO)
 
 
 def connect_server():
@@ -19,12 +22,15 @@ def connect_server():
         server connection
     """
     email_server_connection = get_config_data()
+
     try:
         server = IMAPClient(email_server_connection.server_config["SERVER"])
         server.login(email_server_connection.server_config["EMAIL"], email_server_connection.server_config["PASSWORD"])
+        logging.info("Connected to email server")
 
         return server
     except ConnectionError as e:
+        logging.fatal(f'Could not connect to specified email server: {e}')
         raise f'Could not connect to specified email server: {e}'
 
 
@@ -45,41 +51,39 @@ def handle_message():
             next_id = server.folder_status('Inbox', 'UIDNEXT')[b'UIDNEXT']
             # in idle mode notification on a change in the folder that we listen to
             server.idle()
+            logging.debug("Server in idle")
             # Wait for up to 30 seconds for an IDLE response
             trigger = server.idle_check(timeout=30)
             if trigger:
                 # need to exit idle in order to fetch email
                 server.idle_done()
-
+                logging.debug("Server out of idle")
                 response = server.fetch(next_id, [b'RFC822'])
                 raw_email_string = response[next_id][b'RFC822'].decode('utf-8')
                 email_message = email.message_from_string(raw_email_string)
-                parsed_data = _parse_message(email_message)
+                parsed_data = parse_message(email_message)
                 if parsed_data.domain == get_config_data().domain_config["From"]:
                     if parsed_data.is_key_word:
                         if parsed_data.file_name:
                             # we are not checking that this is a python file (.py) just running it
-                            result = _download_and_run(parsed_data.file_name, parsed_data.file_part)
+                            result = download_and_run(parsed_data.file_name, parsed_data.file_part)
                             if result.stdout:
-                                _send_response(parsed_data.return_address, message='success', file=parsed_data.file_name,
-                                               result=result.stdout)
+                                send_response(parsed_data.return_address, message='success', file=parsed_data.file_name,
+                                              result=result.stdout)
                             elif result.stderr:
-                                _send_response(parsed_data.return_address, message='error', file=parsed_data.file_name,
-                                               result=result.stderr)
+                                send_response(parsed_data.return_address, message='error', file=parsed_data.file_name,
+                                              result=result.stderr)
                         else:
-                            _send_response(parsed_data.return_address, message='Attachment missing')
+                            send_response(parsed_data.return_address, message='Attachment missing')
                     else:
-                        _send_response(parsed_data.return_address, message='Invalid keyword')
+                        send_response(parsed_data.return_address, message='Invalid keyword')
 
         except KeyboardInterrupt:
             break
 
-        # finally:
-        #     server.idle_done()
-        #     server.logout()
 
 
-def _parse_message(message, key_word="banana".lower()):
+def parse_message(message, key_word="banana".lower()):
     """
         Parses message for data
     :param message: message
@@ -119,7 +123,7 @@ def _parse_message(message, key_word="banana".lower()):
     return Parsed(domain, is_key_word, file_name, return_address, message_file_part)
 
 
-def _download_and_run(file_name, message_file_part):
+def download_and_run(file_name, message_file_part):
     """
         Download attached file
 
@@ -142,7 +146,7 @@ def _download_and_run(file_name, message_file_part):
         raise f'File run ended with error: {e}'
 
 
-def _send_response(address, message=None, file=None, result=None):
+def send_response(address, message=None, file=None, result=None):
     """
         Sends response to the sender
     :param address: senders address
@@ -207,7 +211,7 @@ def _send_response(address, message=None, file=None, result=None):
 
     print("email sent out successfully")
 
-
 handle_message()
+
 
 
